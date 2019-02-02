@@ -45,10 +45,10 @@ class WaypointUpdater(object):
         self.loop()
         
     def loop(self):
+        # Gives control of the publishing frequency
         rate = rospy.Rate(50)
         while not rospy.is_shutdown():
-            # if self.pose and self.base_waypoints:
-            if self.pose and self.base_lane:
+            if self.pose and self.base_waypoints:
                 # get closest waypoint
                 closest_waypoint_idx = self.get_closest_waypoint_id()
                 self.publish_waypoints(closest_waypoint_idx)
@@ -56,16 +56,17 @@ class WaypointUpdater(object):
 
     def pose_cb(self, msg):
         # TODO: Implement
-        self.pose = msg
+        self.pose = msg # stores the car's pose
 
     def waypoints_cb(self, waypoints):
         # TODO: Implement
-        self.base_lane = waypoints
+        self.base_waypoints = waypoints # stores waypoints
         if not self.waypoints_2d:
             self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoints]
             self.waypoint_tree = KDTree(self.waypoints_2d)
             
     def get_closest_waypoint_id(self):
+        # get coordinates of the car
         x = self.pose.pose.position.x
         y = self.pose.pose.position.y
         closest_idx = self.waypoint_tree.query([x,y],1)[1]
@@ -85,12 +86,11 @@ class WaypointUpdater(object):
             closest_idx = (closest_idx + 1) % len(self.waypoints_2d)
         return closest_idx
 
-    def publish_waypoints(self):
+    def publish_waypoints(self, closest_idx):
         lane = Lane()
         lane.header = self.base_waypoints.header
         lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx + LOOKAHEAD_WPS]
         self.final_waypoints_pub.publish(lane)
-        #final_lane = self.generate_lane()
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
